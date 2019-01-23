@@ -36,6 +36,7 @@ class UCB:
         self.Pi = []
         self.arms = arms
         self.recorded_proportions = []
+        self.final_arm = None
 
     def U(self, t, d, T):
         # return (1 + epsilon ** 0.5) * (
@@ -92,6 +93,7 @@ class UCB:
                     summed_tj += tj
 
             if ti > self.alpha * summed_tj:
+                self.final_arm = i
                 return True
 
         return False
@@ -132,6 +134,7 @@ class LUCB(UCB):
         # return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log(t*(np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
         # return (1 + epsilon ** 0.5) * (((1 + epsilon) * t * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
         return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+
     def C(self, ti):
         return self.U(ti, delta / self.n, self.pull_tot)
         # return self.U(ti, delta, self.pull_tot)
@@ -178,6 +181,7 @@ class LUCB(UCB):
         mu_lt, t_lt = self.estimated_means[i_lt], self.n_pulls[i_lt]
 
         if (mu_ht - self.C(t_ht)) > (mu_lt + self.C(t_lt)):
+            self.final_arm = i_ht
             return True
         else:
             return False
@@ -221,22 +225,52 @@ class AE(LUCB):
 
     def stopping_condition(self, idxes_to_pull):
         self.to_pull = idxes_to_pull
-        return len(idxes_to_pull) == 1
+        if len(idxes_to_pull) == 1:
+            self.final_arm = idxes_to_pull[0]
+            return True
+        else:
+            return False
 
 if __name__ == '__main__':
-    n = 6
-    n_trials = 2000
-    means = np.arange(1, -1 / 5, -1 / 5)
-    stds = [1 / 2] * n
-    arms = Arms(means, stds)
+    np.random.seed(1)
+    n = 10
+    n_trials = 200
     trials_prop = []
     best_arm = []
+    H1_list = []
+
+    bound = 1-(2+epsilon)/(2/epsilon)*(1/(np.log(1 + epsilon)))**(1+epsilon)*delta
+
+    print(bound)
+
     alg = 'AE'
+    expe = 'sutton'
+
+    if expe == 'paper':
+        means = [np.arange(1, -1 / 5, -1 / 5)]*n_trials
+        n = len(means)
+        stds = [1 / 2] * n
+
+    elif expe == 'sutton':
+        # means = np.random.randn(n_trials, n)
+        means_ref = np.random.randn(10, n)
+        means = np.concatenate(([means_ref for _ in range(int(n_trials/10))]), axis=0)
+        stds = [1.] * n
+        # H1: max = 168359.09162478897, mean = 1092.8446645308077, median = 10.122772863386617
+        # different to their setting because our algo might terminate after a lot a sampling epochs
+    else:
+        raise ValueError
+
     for r in range(n_trials):
+
+        arms = Arms(means[r], stds)
+        H1_list.append(arms.H1)
+
         if alg == 'LUCB':
             algo = LUCB(n, arms)
         elif alg == 'UCB':
             algo = UCB(n, arms)
+            # H1: max = 606.7952432276828, mean = 128.33392755778638, median = 11.025414578992375
         elif alg == 'AE':
             algo = AE(n, arms)
         else:
@@ -244,22 +278,26 @@ if __name__ == '__main__':
 
         rec = algo.search()
         trials_prop.append(rec)
-
-        if alg in {'UCB','LUCB'}:
-            best_arm.append(np.argmax(algo.estimated_means))
-        elif alg == 'AE':
-            best_arm.append(algo.to_pull[0])
+        best_arm.append(algo.final_arm)
+        # if alg in {'UCB','LUCB'}:
+        #     best_arm.append(np.argmax(algo.estimated_means))
+        # elif alg == 'AE':
+        #     best_arm.append(algo.to_pull[0])
         print(f'run : {r}')
 
     # fp = open(f'./results/{alg}_{n_trials}_raw.pckl', 'wb')
     # pickle.dump(trials_prop, fp)
     # fp.close()
-
+    print(f'H1: max = {np.max(H1_list)}, mean = {np.mean(H1_list)}, median = {np.median(H1_list)}')
     avg_props = []
     for i in range(n):
         avg = []
         max_len = max([len(trial) for trial in trials_prop])
-        for t in range(max_len):
+        mean_len = int(np.mean([len(trial) for trial in trials_prop]))
+        median_len = int(np.median([len(trial) for trial in trials_prop]))
+
+        t_range = max_len
+        for t in range(t_range):
             avg_t = 0
             nv = 0
             for tt, trial in enumerate(trials_prop):
@@ -279,18 +317,23 @@ if __name__ == '__main__':
             avg.append(avg_t)
         avg_props.append(avg)
 
-    fp = open(f'./results/{alg}_{n_trials}_means.pckl', 'wb')
+    fp = open(f'./results/{alg}_{n_trials}_means_meanrange.pckl', 'wb')
     pickle.dump(avg_props, fp)
     fp.close()
 
+    # fp = open(f'./results/{alg}_{n_trials}_means.pckl', 'rb')
+    # fp = open(f'./results/UCB_200_means_meanrange.pckl', 'rb')
+    # avg_props = pickle.load(fp)
+    # fp.close()
+
     cmap = plt.get_cmap('tab20')
 
-    t_steps = np.arange(len(avg_props[0])) / arms.H1
+    t_steps = np.arange(len(avg_props[0])) / np.mean(H1_list)
     for i, avgs in enumerate(avg_props):
         plt.plot(t_steps, avgs, color=cmap(i), label=f'mu_{i}')
     plt.xlabel('Number of pulls (units of H1)')
     plt.ylabel('P(I_t = i)')
-    # plt.xlim(0, 75)
+    plt.xlim(0, 75)
     plt.legend()
     plt.show()
 
