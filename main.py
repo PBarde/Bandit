@@ -43,10 +43,10 @@ class UCB:
         # return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log(T * (np.log((1 + epsilon) * T) + 2) / d)) / (2 * t)) ** 0.5
         # return (1 + epsilon ** 0.5) * (
         #             ((1 + epsilon) * T * np.log( (np.log((1 + epsilon) * T) + 2) / d)) / (2 * t**2)) ** 0.5
-        # return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+        return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
         # return (1 + epsilon ** 0.5) * (((1 + epsilon) * t * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
-        return (1 + epsilon ** 0.5) * (
-                    ((1 + epsilon) * np.log(t * (np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+        # return (1 + epsilon ** 0.5) * (
+        #             ((1 + epsilon) * np.log(t * (np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
     def C(self, ti):
         return (1 + beta) * self.U(ti, delta / self.n, self.pull_tot)
         # return (1 + beta) * self.U(ti, delta, self.pull_tot)
@@ -129,9 +129,9 @@ class LUCB(UCB):
         # return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log(T * (np.log((1 + epsilon) * T) + 2) / d)) / (2 * t)) ** 0.5
         # return (1 + epsilon ** 0.5) * (
         #             ((1 + epsilon) * T * np.log((np.log((1 + epsilon) * T) + 2) / d)) / (2 * t**2)) ** 0.5
-        return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log(t*(np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+        # return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log(t*(np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
         # return (1 + epsilon ** 0.5) * (((1 + epsilon) * t * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
-        # return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+        return (1 + epsilon ** 0.5) * (((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
     def C(self, ti):
         return self.U(ti, delta / self.n, self.pull_tot)
         # return self.U(ti, delta, self.pull_tot)
@@ -189,10 +189,10 @@ class AE(LUCB):
         self.to_pull = [i for i in range(self.n)]
 
     def U(self, t, d, T):
-        # return (1 + epsilon ** 0.5) * (
-        #             ((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
         return (1 + epsilon ** 0.5) * (
-                ((1 + epsilon) * np.log(t*(np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+                    ((1 + epsilon) * np.log((np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
+        # return (1 + epsilon ** 0.5) * (
+                # ((1 + epsilon) * np.log(t*(np.log((1 + epsilon) * t) + 2) / d)) / (2 * t)) ** 0.5
     def C(self, ti):
         return 2 * self.U(ti, delta / self.n, self.pull_tot)
 
